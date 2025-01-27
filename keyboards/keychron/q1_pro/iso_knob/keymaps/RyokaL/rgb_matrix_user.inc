@@ -2,14 +2,13 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
 
 #ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
 
-#ifndef RGB_FIRE_RAND
 #define RGB_FIRE_RAND 1
-#endif
-
-#ifndef RGB_FIRE_DECAY
 #define RGB_FIRE_DECAY 10
-#endif
-
+#define RGB_FIRE_MAXV 255
+#define RGB_FIRE_BASEV 128
+#define RGB_FIRE_LOWV 64
+#define RGB_FIRE_SAT 255
+#define RGB_FIRE_VALDIF (RGB_FIRE_MAXV - RGB_FIRE_BASEV)
 
     typedef struct {
         uint8_t baseH;
@@ -22,7 +21,8 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
             {80, 110}, //Green
             {170, 140}, //Blue
             {190, 210}, //Purple
-            {235, 215}  //Pink
+            {235, 215},  //Pink
+            {0, 255} //Rainbow?
         };
 
         if(uH <= colourConfigs[0].highH) {
@@ -41,7 +41,7 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
             return colourConfigs[4];
         }
         else {
-            return colourConfigs[0];
+            return colourConfigs[5];
         }
         
     }
@@ -55,21 +55,16 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
 
     bool FIRE_RGB(effect_params_t* params) {
         RGB_MATRIX_USE_LIMITS(led_min, led_max);
-        uint8_t baseV = 128;
-        uint8_t lowV = 64;
-        uint8_t maxV = 255;
-        uint8_t sat = 255;
-        uint8_t valDif = maxV - baseV;
 
-        static ColourConfig flameColour;
+        ColourConfig flameColour;
         flameColour = get_colour_config(rgb_matrix_config.hsv.h);
         static uint8_t decay = 0;
 
         if(params->init) {
-            HSV initHSV = {flameColour.baseH, sat, baseV};
+            HSV initHSV = {flameColour.baseH, RGB_FIRE_SAT, RGB_FIRE_BASEV};
             RGB initRGB = rgb_matrix_hsv_to_rgb(initHSV);
             rgb_matrix_set_color_all(initRGB.r, initRGB.b, initRGB.g);
-            memset(g_rgb_frame_buffer, baseV, sizeof(g_rgb_frame_buffer));
+            memset(g_rgb_frame_buffer, RGB_FIRE_BASEV, sizeof(g_rgb_frame_buffer));
         }
 
         uint16_t time = scale16by8(g_rgb_timer, rgb_matrix_config.speed / 8);
@@ -86,23 +81,23 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
                     continue;
                 }
 
-                if(g_rgb_frame_buffer[row][col] == baseV && simple_rand() < RGB_FIRE_RAND) {
-                    g_rgb_frame_buffer[row][col] = ((maxV * simple_rand()) >> 8) + baseV;
+                if(g_rgb_frame_buffer[row][col] == RGB_FIRE_BASEV && simple_rand() < RGB_FIRE_RAND) {
+                    g_rgb_frame_buffer[row][col] = ((RGB_FIRE_MAXV * simple_rand()) >> 8) + RGB_FIRE_BASEV;
                     newHue = flameColour.highH;
                     newVal = g_rgb_frame_buffer[row][col];
                 }
-                else if(g_rgb_frame_buffer[row][col] > baseV) { //decay colour and brightness back to base
+                else if(g_rgb_frame_buffer[row][col] > RGB_FIRE_BASEV) { //decay colour and brightness back to base
                     if(decay >= RGB_FIRE_DECAY) g_rgb_frame_buffer[row][col]--;
                     //lerp from current hue closer to target base hue - this formula is close enough
                     if(flameColour.baseH > flameColour.highH) {
-                        newHue = flameColour.highH + ((maxV - g_rgb_frame_buffer[row][col])/(valDif/(flameColour.baseH - flameColour.highH)));
+                        newHue = flameColour.highH + ((RGB_FIRE_MAXV - g_rgb_frame_buffer[row][col])/(RGB_FIRE_VALDIF/(flameColour.baseH - flameColour.highH)));
                         //Underflow checker
                         if(newHue >= 0 && newHue < flameColour.highH) {
                             newHue = flameColour.baseH;
                         }
                     }
                     else {
-                        newHue = flameColour.highH - ((maxV - g_rgb_frame_buffer[row][col])/(valDif/(flameColour.highH - flameColour.baseH)));
+                        newHue = flameColour.highH - ((RGB_FIRE_MAXV - g_rgb_frame_buffer[row][col])/(RGB_FIRE_VALDIF/(flameColour.highH - flameColour.baseH)));
                         //Overflow checker
                         if(newHue <= 255 && newHue > flameColour.highH) {
                             newHue = flameColour.baseH;
@@ -110,13 +105,13 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
                     }
                     newVal = g_rgb_frame_buffer[row][col];
                 }
-                else if(g_rgb_frame_buffer[row][col] <= baseV) {
-                    g_rgb_frame_buffer[row][col] = baseV;
-                    newVal = scale8(abs8(sin8(time) - 128) * 2, baseV - lowV) + lowV;
+                else if(g_rgb_frame_buffer[row][col] <= RGB_FIRE_BASEV) {
+                    g_rgb_frame_buffer[row][col] = RGB_FIRE_BASEV;
+                    newVal = scale8(abs8(sin8(time) - 128) * 2, RGB_FIRE_BASEV - RGB_FIRE_LOWV) + RGB_FIRE_LOWV;
                     newHue = flameColour.baseH;
                 }
 
-                HSV newHsv = {newHue, sat, newVal};
+                HSV newHsv = {newHue, RGB_FIRE_SAT, newVal};
                 RGB rgb = rgb_matrix_hsv_to_rgb(newHsv);
                 
                 rgb_matrix_set_color(led[0], rgb.r, rgb.g, rgb.b);
