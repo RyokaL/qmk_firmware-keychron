@@ -17,31 +17,35 @@ RGB_MATRIX_EFFECT(FIRE_RGB)
 
     static ColourConfig get_colour_config(uint8_t uH) {
         const ColourConfig colourConfigs[] = {
-            {0, 40}, //Red
+            {1, 40}, //Red
+            {30, 43}, //Gold
             {80, 110}, //Green
             {170, 140}, //Blue
             {190, 210}, //Purple
             {235, 215},  //Pink
-            {0, 255} //Rainbow?
+            {1, 254} //Rainbow?
         };
 
-        if(uH <= colourConfigs[0].highH) {
+        if(uH <= colourConfigs[1].baseH) {
             return colourConfigs[0];
         }
         else if(uH <= colourConfigs[1].highH) {
             return colourConfigs[1];
         }
-        else if(uH <= colourConfigs[2].baseH) {
+        else if(uH <= colourConfigs[2].highH) {
             return colourConfigs[2];
         }
-        else if(uH <= colourConfigs[3].highH) {
+        else if(uH <= colourConfigs[3].baseH) {
             return colourConfigs[3];
         }
-        else if(uH <= colourConfigs[4].baseH) {
+        else if(uH <= colourConfigs[4].highH) {
             return colourConfigs[4];
         }
-        else {
+        else if(uH <= colourConfigs[5].baseH) {
             return colourConfigs[5];
+        }
+        else {
+            return colourConfigs[6];
         }
         
     }
